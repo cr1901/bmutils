@@ -4,6 +4,8 @@ from . import tabhamster
 
 def main():
     parser = argparse.ArgumentParser()
+    # https://stackoverflow.com/a/61680800
+    parser.set_defaults(func=lambda args: parser.print_help())
     subparsers = parser.add_subparsers()
 
     th_parser = subparsers.add_parser("tabhamster",
