@@ -1,4 +1,4 @@
-import argparse
+import io
 import json
 import sys
 
@@ -49,18 +49,14 @@ def write_bookmarks(fp, th_sess):
     fp.write(f"{'':<{indent}}</DL>\n")
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("inp")
-    parser.add_argument("outp", nargs="?")
-
-    args = parser.parse_args()
-
+def write(args):
     with open(args.inp, "r", encoding="utf-8") as fp:
         th_sess = json.load(fp)
 
     if args.outp is None:
-        write_bookmarks(sys.stdout, th_sess)
+        # https://stackoverflow.com/a/30673656
+        utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        write_bookmarks(utf8_stdout, th_sess)
     else:
         with open(args.outp, "w", encoding="utf-8") as fp:
             write_bookmarks(fp, th_sess)
