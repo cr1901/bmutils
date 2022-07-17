@@ -1,8 +1,9 @@
-import io
 import json
-import sys
 
-from . import netscape
+from . import netscape as nsutil
+
+import NetscapeBookmarksFileParser as nsparser
+import NetscapeBookmarksFileParser.creator  # noqa: F401
 
 
 def make_bookmarks(th_sess):
@@ -14,26 +15,31 @@ def make_bookmarks(th_sess):
     timestamps = list(map(lambda k: rounded_epoch_in_seconds(int(k[3:])),
                       filter(lambda k: k.startswith("tg_"), th_sess.keys())))
 
-    bookmarks = netscape.Bookmarks(name="TabHamster Sessions",
-                                   add_date=min(timestamps),
-                                   last_modified=max(timestamps))
+    bookmarks = nsparser.BookmarkFolder()
+    bookmarks.name = "TabHamster Sessions"
+    bookmarks.add_date_unix = min(timestamps)
+    bookmarks.last_modified_unix = max(timestamps)
 
     for k, v in th_sess.items():
         if k.startswith("tg_"):
             timestamp = rounded_epoch_in_seconds(int(k[3:]))
-            subfolder = netscape.Subfolder(name=v["name"],
-                                           add_date=timestamp,
-                                           last_modified=timestamp)
+
+            subfolder = nsparser.BookmarkFolder()
+            subfolder.name = v["name"]
+            subfolder.add_date_unix = timestamp
+            subfolder.last_modified_unix = timestamp
 
             for t in sorted(v["tabs"], key=lambda t: t["id"]):
-                shortcut = netscape.Shortcut(name=t["title"],
-                                             url=t["url"],
-                                             add_date=timestamp,
-                                             last_modified=timestamp)
-                subfolder.entries.append(shortcut)
-            bookmarks.entries.append(subfolder)
+                shortcut = nsparser.BookmarkShortcut()
+                shortcut.name = t["title"]
+                shortcut.href = t["url"]
+                shortcut.add_date_unix = timestamp
+                shortcut.last_modified_unix = timestamp
 
-    return bookmarks
+                subfolder.items.append(shortcut)
+            bookmarks.items.append(subfolder)
+
+    return nsutil.prepare_top_level(bookmarks)
 
 
 def write(args):
@@ -41,10 +47,4 @@ def write(args):
         th_sess = json.load(fp)
         bookmarks = make_bookmarks(th_sess)
 
-    if args.outp is None:
-        # https://stackoverflow.com/a/30673656
-        utf8_stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-        bookmarks.write(utf8_stdout)
-    else:
-        with open(args.outp, "w", encoding="utf-8") as fp:
-            bookmarks.write(fp)
+    nsutil.write(bookmarks, args.outp)
