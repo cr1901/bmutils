@@ -15,6 +15,12 @@ from pathlib import Path
 from ssl import SSLContext, PROTOCOL_TLS_SERVER
 
 
+# If you followed the steps as specified in credential_prompt, Twitter will
+# redirect us to a localhost HTTPS link. We spawn an HTTPS server solely for
+# handling the redirect.
+# We spawn the server in another process; the server has an IPC queue to send
+# the information that Twitter sent us back to the main process so the OAuth
+# process can continue.
 class LocalHTTPSServer(HTTPServer):
     def __init__(self, server_address, RequestHandlerClass, cert, ipc_queue):
         super().__init__(server_address, RequestHandlerClass)
@@ -92,10 +98,12 @@ def get_credentials(username, force_update):
 
 # Because of how OAuth 2.0 PKCE works (on Twitter?), we must use SSL, and
 # we must redirect to a HTTPS link on localhost.
+# To make HTTPS actually work, we must create a self-signed certificate.
 # A lot of this was taken from:
 # https://www.misterpki.com/python-self-signed-certificate/ and
 # https://cryptography.io/en/latest/hazmat/primitives/asymmetric/rsa/#key-serialization  # noqa: E501
 def create_certificate(cert_path):
+    # Self-signing key
     key = rsa.generate_private_key(
         public_exponent=65537,
         key_size=2048,
@@ -132,6 +140,8 @@ def spawn_https_server(cert, q):
     server.serve_forever()
 
 
+# Main function that does the OAuth flow, once you have set up a Twitter
+# project on the developer portal which can act on your behalf.
 def get_client(creds):
     fake_cert = Path(appdirs.user_config_dir("bmutils", "", roaming=True)) / "cert.pem"  # noqa: E501
 
@@ -153,6 +163,9 @@ def get_client(creds):
     https_url = oauth2_user_handler.get_authorization_url()
     webbrowser.open(https_url)
 
+    # FIXME: Please tell me there's a way around this. This is a desktop app,
+    # that runs from your terminal; I'm not creating a website with a valid
+    # certificate signed by a CA for a _desktop/terminal_ app.
     print("If your web browser complains about security risk, accept the risk and continue.")  # noqa: E501
     auth_response = q.get()
     access_token = oauth2_user_handler.fetch_token(auth_response.decode("utf-8"))  # noqa: E501
@@ -162,6 +175,12 @@ def get_client(creds):
     return tweepy.Client(access_token["access_token"], wait_on_rate_limit=True)
 
 
+# Treat this as a per-user project acting on behalf of each user. Twitter
+# mandates PKCE to get bookmarks, and expects the client environment (i.e. your
+# computer) to be able to handle a URL of some sort to finish the OAuth flow.
+# We use an HTTPS URL on localhost because that was the only method I at
+# present could get working. We spawn an HTTPS server solely for handling
+# Twitter's redirect when you give them permissions to access your account.
 def credential_prompt(username):
     print("If you have a Developer Account, go to Projects & Apps.")
     print("You will need to enable OAuth 2.0 under your project settings (click the gear).")  # noqa: E501
