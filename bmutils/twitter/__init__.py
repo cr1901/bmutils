@@ -8,6 +8,8 @@ def write(args):
 
     if args.cmd == "bmsave":
         bookmarks.save(args, client)
+    if args.cmd == "bmsaveall":
+        bookmarks.saveall(args, client)
     elif args.cmd == "bmdel":
         bookmarks.delete(args, client)
     elif args.cmd == "lists":

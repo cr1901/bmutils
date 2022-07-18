@@ -33,10 +33,12 @@ def main():
 
     twt_list_parser = twt_subparsers.add_parser("lists", help="parse Twitter lists")  # noqa: E501
     twt_bmsave_parser = twt_subparsers.add_parser("bmsave", help="parse Twitter bookmarks")  # noqa: E501
+    twt_bmsaveall_parser = twt_subparsers.add_parser("bmsaveall", help="parse all Twitter bookmarks (will delete bookmarks after saving)")  # noqa: E501
     twt_bmdel_parser = twt_subparsers.add_parser("bmdel", help="delete Twitter bookmarks from account")  # noqa: E501
 
     twt_list_parser.add_argument("outp")
     twt_bmsave_parser.add_argument("outp")
+    twt_bmsaveall_parser.add_argument("outp")
     twt_bmdel_parser.add_argument("inp")
 
     args = parser.parse_args()
