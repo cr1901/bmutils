@@ -1,3 +1,4 @@
+import re
 import time
 import tweepy
 
@@ -7,6 +8,17 @@ from .. import netscape as nsutil
 
 import NetscapeBookmarksFileParser as nsparser
 import NetscapeBookmarksFileParser.creator  # noqa: F401
+import NetscapeBookmarksFileParser.parser  # noqa: F401
+
+
+class IdExtractor(nsutil.Visitor):
+    def __init__(self, bookmarks):
+        super().__init__(bookmarks)
+        self.ids = []
+        self.id_re = re.compile("https://twitter.com/.*/status/([0-9]*)")
+
+    def visit_shortcut(self, shortcut):
+        self.ids.append(self.id_re.match(shortcut.href)[1])
 
 
 def save(args, client):
@@ -50,3 +62,12 @@ def save(args, client):
                 e.last_modified_unix = added_lower_bound
 
     nsutil.write(nsutil.prepare_top_level(bookmarks), args.outp)
+
+
+def delete(args, client):
+    with open(args.inp, encoding="utf-8") as fp:
+        extractor = IdExtractor(nsparser.NetscapeBookmarksFile(fp).parse())
+        extractor.visit()
+
+    for id in extractor.ids:
+        client.remove_bookmark(id)

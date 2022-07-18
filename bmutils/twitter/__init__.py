@@ -9,7 +9,7 @@ def write(args):
     if args.cmd == "bmsave":
         bookmarks.save(args, client)
     elif args.cmd == "bmdel":
-        raise NotImplementedError
+        bookmarks.delete(args, client)
     elif args.cmd == "lists":
         raise NotImplementedError
     else:
