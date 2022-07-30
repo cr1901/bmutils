@@ -1,3 +1,4 @@
+import html
 import re
 import time
 import tweepy
@@ -100,7 +101,10 @@ def save(args, client):
             timestamp = int(datetime.fromisoformat(str(tweet.created_at))
                                     .timestamp())
             shortcut = nsparser.BookmarkShortcut()
-            shortcut.name = f"{user_dict[tweet.author_id].name}: {tweet.text}"
+            # Unescape and put text on one line so bookmark files survive a
+            # round trip from parsing/writing.
+            oneline_text = html.unescape(tweet.text.replace("\n", " "))
+            shortcut.name = f"{user_dict[tweet.author_id].name}: {oneline_text}"  # noqa: E501
             shortcut.href = f"https://twitter.com/{user_dict[tweet.author_id].username}/status/{tweet.id}"  # noqa: E501
             shortcut.add_date_unix = timestamp
             shortcut.last_modified_unix = timestamp
@@ -125,5 +129,9 @@ def delete(args, client):
         extractor = IdExtractor(nsparser.NetscapeBookmarksFile(fp).parse())
         extractor.visit()
 
-    for id in extractor.ids:
-        client.remove_bookmark(id)
+    if args.dry_run:
+        for id in extractor.ids:
+            print(f"will delete {id}")
+    else:
+        for id in extractor.ids:
+            client.remove_bookmark(id)

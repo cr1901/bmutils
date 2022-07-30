@@ -40,6 +40,8 @@ def main():
     twt_bmsave_parser.add_argument("outp")
     twt_bmsaveall_parser.add_argument("outp")
     twt_bmdel_parser.add_argument("inp")
+    twt_bmdel_parser.add_argument("-n", dest="dry_run", action="store_true",
+                                  help="dry run (only explain- don't delete)")
 
     args = parser.parse_args()
     args.func(args)
